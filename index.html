@@ -1,0 +1,95 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local gui = script.Parent
+
+local startButton = gui.StartButton
+local statusLabel = gui.StatusLabel
+local minigameFrame = gui.MinigameFrame
+local marker = minigameFrame.Marker
+local target = minigameFrame.Target
+
+local fishing = false
+local markerPos = 0.5
+local velocity = 0
+local progress = 0
+
+minigameFrame.Visible = false
+
+local function startMinigame()
+	statusLabel.Text = "Waiting for a bite..."
+	task.wait(math.random(2, 5))
+
+	statusLabel.Text = "Fish hooked!"
+	minigameFrame.Visible = true
+
+	fishing = true
+	markerPos = 0.5
+	velocity = 0
+	progress = 0
+
+	target.Position = UDim2.new(math.random(10, 70) / 100, 0, 0.5, 0)
+end
+
+startButton.MouseButton1Click:Connect(function()
+	if fishing then
+		return
+	end
+
+	task.spawn(startMinigame)
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed or not fishing then
+		return
+	end
+
+	if input.UserInputType == Enum.UserInputType.Touch
+		or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		velocity = velocity - 0.03
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if not fishing then
+		return
+	end
+
+	velocity += 0.001
+	markerPos += velocity
+
+	markerPos = math.clamp(markerPos, 0, 1)
+
+	marker.Position = UDim2.new(markerPos, 0, 0.5, 0)
+
+	local left = target.Position.X.Scale
+	local right = left + target.Size.X.Scale
+
+	if markerPos >= left and markerPos <= right then
+		progress += 0.01
+		statusLabel.Text = "Reeling in... " .. math.floor(progress * 100) .. "%"
+	else
+		progress -= 0.02
+	end
+
+	progress = math.clamp(progress, 0, 1)
+
+	if progress >= 1 then
+		fishing = false
+		minigameFrame.Visible = false
+
+		local fishList = {
+			"Minnow",
+			"Bass",
+			"Salmon",
+			"Trout",
+			"Golden Fish"
+		}
+
+		local fish = fishList[math.random(1, #fishList)]
+
+		statusLabel.Text = "Caught: " .. fish
+	end
+end)
